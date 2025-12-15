@@ -18,7 +18,7 @@ except FileNotFoundError:
     print(f"[ERROR] File tidak ditemukan di: {DATA_PATH}")
     exit()
 
-df = df.head(5000) # Sample 5k biar proses CI cepet
+df = df.head(1500) # Sample 5k biar proses CI cepet
 
 # 2. Set Experiment (Opsional di CI, tapi bagus buat log)
 mlflow.set_experiment("CI_Steam_Experiment")
