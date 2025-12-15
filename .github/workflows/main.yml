@@ -1,0 +1,47 @@
+name: Training Model Otomatis
+
+# Trigger: Jalan setiap kali ada push ke main
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-train:
+    runs-on: ubuntu-latest
+    
+    # Berikan izin supaya bot bisa nge-push hasil training ke repo (Syarat Skilled)
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install mlflow pandas scikit-learn numpy
+
+    - name: Jalankan Training (MLflow)
+      run: |
+        cd MLProject
+        python modelling.py
+    
+    - name: Simpan & Push Artifact ke Repo (SKILLED POINT)
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        
+        # Cek status dulu
+        git status
+        
+        # Tambahkan file model yang baru dibuat
+        git add MLProject/cosine_model_ci.pkl
+        
+        # Commit dan Push jika ada perubahan
+        git commit -m "Auto-save: Update trained model artifact [skip ci]" || echo "No changes to commit"
+        git push
