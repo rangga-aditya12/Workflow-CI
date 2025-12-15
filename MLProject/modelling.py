@@ -4,43 +4,42 @@ import mlflow.sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+import os
+
+# Set path agar aman saat dijalankan di CI
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, 'steam_data_clean_ready_preprocessing.csv')
 
 # 1. Load Data
 print("[INFO] Loading data...")
-# Pastikan file csv sudah ada di folder yang sama
 try:
-    df = pd.read_csv('steam_data_clean_ready_preprocessing.csv')
+    df = pd.read_csv(DATA_PATH)
 except FileNotFoundError:
-    print("[ERROR] File csv tidak ditemukan! Pastikan sudah dicopy ke folder ini.")
+    print(f"[ERROR] File tidak ditemukan di: {DATA_PATH}")
     exit()
 
-# Sample data biar laptop gak nge-lag (10k data)
-df = df.head(10000) 
+df = df.head(5000) # Sample 5k biar proses CI cepet
 
-# 2. Set Experiment MLflow
-mlflow.set_experiment("Steam_Recommender_Basic")
+# 2. Set Experiment (Opsional di CI, tapi bagus buat log)
+mlflow.set_experiment("CI_Steam_Experiment")
 
-# 3. Training dengan Autolog (Syarat Basic)
-print("[INFO] Training Model (Basic)...")
-
-# Aktifkan Autolog
+# 3. Training
+print("[INFO] Training Model di GitHub Actions...")
 mlflow.sklearn.autolog()
 
-with mlflow.start_run(run_name="Run_Autolog"):
-    # Vektorisasi
+with mlflow.start_run():
     tfidf = TfidfVectorizer(stop_words='english')
     tfidf_matrix = tfidf.fit_transform(df['combined_features'])
     
-    # Hitung Cosine Similarity
     cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
     
-    print("[INFO] Model selesai dilatih.")
+    # 4. Simpan Model sebagai Artifact Fisik
+    # Ini penting buat Skilled: Kita simpan file-nya biar bisa dicommit balik ke GitHub
+    model_name = "cosine_model_ci.pkl"
+    save_path = os.path.join(BASE_DIR, model_name)
     
-    # Simpan Model manual (Pickle) karena Cosine Sim bukan model standar sklearn
-    with open("cosine_model.pkl", "wb") as f:
+    with open(save_path, "wb") as f:
         pickle.dump(cosine_sim, f)
     
-    # Log artifact manual
-    mlflow.log_artifact("cosine_model.pkl")
-
-print("[SUCCESS] Selesai! Cek MLflow UI.")
+    mlflow.log_artifact(save_path)
+    print(f"[SUCCESS] Model disimpan di: {save_path}")
